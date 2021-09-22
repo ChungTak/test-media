@@ -1,5 +1,8 @@
 #include <greeter/greeter.h>
 #include <greeter/version.h>
+#include <openssl/bio.h>
+#include <openssl/ssl.h>
+#include <stdio.h>
 
 #include <cxxopts.hpp>
 #include <iostream>
@@ -7,6 +10,14 @@
 #include <unordered_map>
 
 auto main(int argc, char** argv) -> int {
+  BIO* bio_stdout;
+
+  bio_stdout = BIO_new_fp(stdout, BIO_NOCLOSE);
+
+  BIO_printf(bio_stdout, "hello, World222!\n");
+
+  BIO_free_all(bio_stdout);
+
   const std::unordered_map<std::string, greeter::LanguageCode> languages{
       {"en", greeter::LanguageCode::EN},
       {"de", greeter::LanguageCode::DE},
@@ -23,7 +34,7 @@ auto main(int argc, char** argv) -> int {
   options.add_options()
     ("h,help", "Show help")
     ("v,version", "Print the current version number")
-    ("n,name", "Name to greet", cxxopts::value(name)->default_value("World"))
+    ("n,name", "Name to greet", cxxopts::value(name)->default_value("World2"))
     ("l,lang", "Language code to use", cxxopts::value(language)->default_value("en"))
   ;
   // clang-format on

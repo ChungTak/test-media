@@ -6,8 +6,10 @@ cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 project(
   Greeter
   VERSION 1.0
-  LANGUAGES CXX
+  LANGUAGES C CXX
 )
+# https://stackoverflow.com/questions/38296756/what-is-the-idiomatic-way-in-cmake-to-add-the-fpic-compiler-option/64552011#64552011
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 # ---- Include guards ----
 
@@ -24,14 +26,65 @@ endif()
 include(cmake/CPM.cmake)
 
 # PackageProject.cmake will be used to make our target installable
-CPMAddPackage("gh:TheLartians/PackageProject.cmake@1.6.0")
+CPMAddPackage("https://hub.fastgit.org/TheLartians/PackageProject.cmake.git@1.6.0")
+#CPMAddPackage("https://hub.fastgit.org/fmtlib/fmt.git#7.1.3")
 
 CPMAddPackage(
   NAME fmt
   GIT_TAG 7.1.3
-  GITHUB_REPOSITORY fmtlib/fmt
+  GIT_REPOSITORY "https://hub.fastgit.org/fmtlib/fmt.git"
   OPTIONS "FMT_INSTALL YES" # create an installable target
 )
+
+CPMAddPackage(
+        NAME openssl-cmake
+        GIT_REPOSITORY https://hub.fastgit.org/janbar/openssl-cmake.git
+        GIT_TAG master
+        OPTIONS
+        "WITH_APPS OFF"
+)
+if (openssl-cmake_ADDED)
+    set(OPENSSL_INCLUDE_DIR "${openssl-cmake_BINARY_DIR}/include")
+    target_include_directories(ssl INTERFACE ${OPENSSL_INCLUDE_DIR})
+    target_include_directories(crypto INTERFACE ${OPENSSL_INCLUDE_DIR})
+    add_definitions(-D_OPENSSL_) # librtmp
+endif()
+
+CPMAddPackage(
+  NAME libhv
+  GIT_REPOSITORY https://hub.fastgit.org/ithewei/libhv.git
+  GIT_TAG master
+  OPTIONS "BUILD_EXAMPLES OFF" "WITH_OPENSSL ON"
+)
+
+CPMAddPackage(
+  NAME ireader_sdk
+  GIT_REPOSITORY https://hub.fastgit.org/ireader/sdk.git
+  GIT_TAG master
+  DOWNLOAD_ONLY True
+)
+
+CPMAddPackage(
+  NAME ireader_media_server
+  GIT_REPOSITORY https://hub.fastgit.org/ireader/media-server.git
+  GIT_TAG master
+  DOWNLOAD_ONLY True
+)
+
+if (ireader_media_server_ADDED)
+  # no CMake support, so we create our own target
+  FILE(GLOB ireader_media_server_sources ${ireader_media_server_SOURCE_DIR}/libflv/source/*.c
+                                         ${ireader_media_server_SOURCE_DIR}/librtmp/source/*.c)
+  #list(REMOVE_ITEM ireader_media_server_sources "${ireader_media_server_SOURCE_DIR}/ireader_media_server.c" "${ireader_media_server_SOURCE_DIR}/ireader_media_serverc.c")
+  add_library(ireader_media_server STATIC ${ireader_media_server_sources})
+  # set_target_properties(ireader_media_server PROPERTIES LINKER_LANGUAGE CXX)
+
+  target_include_directories(ireader_media_server
+    PUBLIC
+      $<BUILD_INTERFACE:${ireader_media_server_SOURCE_DIR}/libflv/include>
+      $<BUILD_INTERFACE:${ireader_media_server_SOURCE_DIR}/librtmp/include>
+  )
+endif()
 
 # ---- Add source files ----
 
@@ -46,13 +99,13 @@ file(GLOB_RECURSE sources CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/source/
 # target: add_library(Greeter INTERFACE)
 add_library(Greeter ${headers} ${sources})
 
-set_target_properties(Greeter PROPERTIES CXX_STANDARD 17)
+set_target_properties(Greeter PROPERTIES CXX_STANDARD 11)
 
 # being a cross-platform target, we enforce standards conformance on MSVC
 target_compile_options(Greeter PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
 # Link dependencies
-target_link_libraries(Greeter PRIVATE fmt::fmt)
+target_link_libraries(Greeter PRIVATE fmt::fmt )
 
 target_include_directories(
   Greeter PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
