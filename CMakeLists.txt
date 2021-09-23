@@ -46,6 +46,9 @@ if (openssl-cmake_ADDED)
     set(OPENSSL_INCLUDE_DIR "${openssl-cmake_BINARY_DIR}/include")
     target_include_directories(ssl INTERFACE ${OPENSSL_INCLUDE_DIR})
     target_include_directories(crypto INTERFACE ${OPENSSL_INCLUDE_DIR})
+
+    include_directories(${OPENSSL_INCLUDE_DIR})
+
 endif()
 
 CPMAddPackage(
@@ -79,8 +82,8 @@ if (ireader_media_server_ADDED)
   FILE(GLOB ireader_media_server_sources ${ireader_media_server_SOURCE_DIR}/libflv/source/*.c
                                          ${ireader_media_server_SOURCE_DIR}/librtmp/source/*.c)
   add_library(ireader_media_server STATIC ${ireader_media_server_sources})
-  # add_definitions(-D_OPENSSL_) # librtmp ssl
-  target_compile_definitions(ireader_media_server PRIVATE _OPENSSL_)
+  add_definitions(-D_OPENSSL_) # librtmp ssl
+  # target_compile_definitions(ireader_media_server PRIVATE _OPENSSL_)
 
   include_directories(${ireader_media_server_SOURCE_DIR}/libflv/include)
   include_directories(${ireader_media_server_SOURCE_DIR}/librtmp/include)
@@ -90,6 +93,8 @@ if (ireader_media_server_ADDED)
       $<BUILD_INTERFACE:${ireader_media_server_SOURCE_DIR}/libflv/include>
       $<BUILD_INTERFACE:${ireader_media_server_SOURCE_DIR}/librtmp/include>
   )
+  add_dependencies(ireader_media_server  ssl crypto)
+
   #install(TARGETS ireader_media_server DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/lib)
 
 
