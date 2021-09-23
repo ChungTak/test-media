@@ -1,64 +1,97 @@
-#include <greeter/greeter.h>
-#include <greeter/version.h>
-#include <openssl/bio.h>
-#include <openssl/ssl.h>
+#include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <cxxopts.hpp>
-#include <iostream>
-#include <string>
-#include <unordered_map>
+#include "hv/TcpServer.h"
+#include "rtmp-server.h"
 
-auto main(int argc, char** argv) -> int {
-  BIO* bio_stdout;
+using namespace hv;
 
-  bio_stdout = BIO_new_fp(stdout, BIO_NOCLOSE);
+static std::vector<SocketChannelPtr> rtmpChannelList;
 
-  BIO_printf(bio_stdout, "hello, World222!\n");
+static int rtmp_server_send(void* param, const void* header, size_t len, const void* data,
+                            size_t bytes) {
+  printf("rtmp_server_send \n");
+  SocketChannelPtr channel = rtmpChannelList[0];
+  if (len > 0) {
+    channel.get()->write(header, len);
+  }
+  channel.get()->write(data, bytes);
 
-  BIO_free_all(bio_stdout);
+  return len + bytes;
+}
 
-  const std::unordered_map<std::string, greeter::LanguageCode> languages{
-      {"en", greeter::LanguageCode::EN},
-      {"de", greeter::LanguageCode::DE},
-      {"es", greeter::LanguageCode::ES},
-      {"fr", greeter::LanguageCode::FR},
+static int rtmp_server_onpublish(void* param, const char* app, const char* stream,
+                                 const char* type) {
+  printf("rtmp_server_onpublish(%s, %s, %s)\n", app, stream, type);
+  return 0;
+}
+
+static int rtmp_server_onscript(void* param, const void* script, size_t bytes, uint32_t timestamp) {
+  printf("[S] timestamp: %u\n", timestamp);
+  return 0;
+}
+
+static int rtmp_server_onvideo(void* param, const void* data, size_t bytes, uint32_t timestamp) {
+  printf("[V] timestamp: %u\n", timestamp);
+  return 0;
+}
+
+static int rtmp_server_onaudio(void* param, const void* data, size_t bytes, uint32_t timestamp) {
+  printf("[A] timestamp: %u\n", timestamp);
+  return 0;
+}
+
+int main(int argc, char* argv[]) {
+  printf("main\n");
+
+  static uint8_t packet[8 * 1024 * 1024];
+
+  struct rtmp_server_handler_t handler;
+  memset(&handler, 0, sizeof(handler));
+  handler.send = rtmp_server_send;
+  handler.onpublish = rtmp_server_onpublish;
+  handler.onaudio = rtmp_server_onaudio;
+  handler.onvideo = rtmp_server_onvideo;
+  handler.onscript = rtmp_server_onscript;
+  rtmp_server_t* rtmp = rtmp_server_create(NULL, &handler);
+
+  int port = 1935;
+
+  TcpServer srv;
+  int listenfd = srv.createsocket(port);
+  if (listenfd < 0) {
+    return -20;
+  }
+
+  printf("server listen on port %d, listenfd=%d ...\n", port, listenfd);
+  srv.onConnection = [](const SocketChannelPtr& channel) {
+    std::string peeraddr = channel->peeraddr();
+    if (channel->isConnected()) {
+      printf("%s connected! connfd=%d\n", peeraddr.c_str(), channel->fd());
+    } else {
+      printf("%s disconnected! connfd=%d\n", peeraddr.c_str(), channel->fd());
+    }
   };
+  srv.onMessage = [&rtmp](const SocketChannelPtr& channel, Buffer* buf) {
+    // echo
+    // printf("< %d\n", (int)buf->size());
+    rtmpChannelList.push_back(channel);
+    rtmp_server_input(rtmp, (uint8_t*)buf->data(), buf->size());
 
-  cxxopts::Options options(*argv, "A program to welcome the world!");
+    // channel->write(buf);
+  };
+  srv.onWriteComplete = [](const SocketChannelPtr& channel, Buffer* buf) {
+    // printf("> %.*s\n", (int)buf->size(), (char*)buf->data());
+  };
+  srv.setThreadNum(4);
+  srv.start();
+  printf("start\n");
 
-  std::string language;
-  std::string name;
+  while (1) hv_sleep(1);
+  printf("endend\n");
 
-  // clang-format off
-  options.add_options()
-    ("h,help", "Show help")
-    ("v,version", "Print the current version number")
-    ("n,name", "Name to greet", cxxopts::value(name)->default_value("World2"))
-    ("l,lang", "Language code to use", cxxopts::value(language)->default_value("en"))
-  ;
-  // clang-format on
-
-  auto result = options.parse(argc, argv);
-
-  if (result["help"].as<bool>()) {
-    std::cout << options.help() << std::endl;
-    return 0;
-  }
-
-  if (result["version"].as<bool>()) {
-    std::cout << "Greeter, version " << GREETER_VERSION << std::endl;
-    return 0;
-  }
-
-  auto langIt = languages.find(language);
-  if (langIt == languages.end()) {
-    std::cerr << "unknown language code: " << language << std::endl;
-    return 1;
-  }
-
-  greeter::Greeter greeter(name);
-  std::cout << greeter.greet(langIt->second) << std::endl;
-
+  rtmp_server_destroy(rtmp);
   return 0;
 }

@@ -27,7 +27,6 @@ include(cmake/CPM.cmake)
 
 # PackageProject.cmake will be used to make our target installable
 CPMAddPackage("https://hub.fastgit.org/TheLartians/PackageProject.cmake.git@1.6.0")
-#CPMAddPackage("https://hub.fastgit.org/fmtlib/fmt.git#7.1.3")
 
 CPMAddPackage(
   NAME fmt
@@ -47,7 +46,6 @@ if (openssl-cmake_ADDED)
     set(OPENSSL_INCLUDE_DIR "${openssl-cmake_BINARY_DIR}/include")
     target_include_directories(ssl INTERFACE ${OPENSSL_INCLUDE_DIR})
     target_include_directories(crypto INTERFACE ${OPENSSL_INCLUDE_DIR})
-    add_definitions(-D_OPENSSL_) # librtmp
 endif()
 
 CPMAddPackage(
@@ -56,6 +54,10 @@ CPMAddPackage(
   GIT_TAG master
   OPTIONS "BUILD_EXAMPLES OFF" "WITH_OPENSSL ON"
 )
+if(libhv_ADDED)
+   target_include_directories(hv INTERFACE "${libhv_BINARY_DIR}/include")
+   include_directories("${libhv_BINARY_DIR}/include")
+endif()
 
 CPMAddPackage(
   NAME ireader_sdk
@@ -72,18 +74,25 @@ CPMAddPackage(
 )
 
 if (ireader_media_server_ADDED)
+  message(STATUS "ENABLE_ireader_media_server")
   # no CMake support, so we create our own target
   FILE(GLOB ireader_media_server_sources ${ireader_media_server_SOURCE_DIR}/libflv/source/*.c
                                          ${ireader_media_server_SOURCE_DIR}/librtmp/source/*.c)
-  #list(REMOVE_ITEM ireader_media_server_sources "${ireader_media_server_SOURCE_DIR}/ireader_media_server.c" "${ireader_media_server_SOURCE_DIR}/ireader_media_serverc.c")
   add_library(ireader_media_server STATIC ${ireader_media_server_sources})
-  # set_target_properties(ireader_media_server PROPERTIES LINKER_LANGUAGE CXX)
+  # add_definitions(-D_OPENSSL_) # librtmp ssl
+  target_compile_definitions(ireader_media_server PRIVATE _OPENSSL_)
+
+  include_directories(${ireader_media_server_SOURCE_DIR}/libflv/include)
+  include_directories(${ireader_media_server_SOURCE_DIR}/librtmp/include)
 
   target_include_directories(ireader_media_server
     PUBLIC
       $<BUILD_INTERFACE:${ireader_media_server_SOURCE_DIR}/libflv/include>
       $<BUILD_INTERFACE:${ireader_media_server_SOURCE_DIR}/librtmp/include>
   )
+  #install(TARGETS ireader_media_server DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/lib)
+
+
 endif()
 
 # ---- Add source files ----
@@ -104,8 +113,9 @@ set_target_properties(Greeter PROPERTIES CXX_STANDARD 11)
 # being a cross-platform target, we enforce standards conformance on MSVC
 target_compile_options(Greeter PUBLIC "$<$<COMPILE_LANG_AND_ID:CXX,MSVC>:/permissive->")
 
+add_dependencies(Greeter  fmt::fmt ireader_media_server)
 # Link dependencies
-target_link_libraries(Greeter PRIVATE fmt::fmt )
+target_link_libraries(Greeter PRIVATE fmt::fmt)
 
 target_include_directories(
   Greeter PUBLIC $<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>
@@ -128,5 +138,5 @@ packageProject(
   INCLUDE_DESTINATION include/${PROJECT_NAME}-${PROJECT_VERSION}
   VERSION_HEADER "${VERSION_HEADER_LOCATION}"
   COMPATIBILITY SameMajorVersion
-  DEPENDENCIES "fmt 7.1.3"
+  DEPENDENCIES "fmt 7.1.3 ireader_media_server"
 )
