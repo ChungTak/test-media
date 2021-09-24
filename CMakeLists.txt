@@ -32,6 +32,7 @@ CPMAddPackage(
   NAME fmt
   GIT_TAG 7.1.3
   GIT_REPOSITORY "https://hub.fastgit.org/fmtlib/fmt.git"
+  GIT_SHALLOW 1 # --depth 1
   OPTIONS "FMT_INSTALL YES" # create an installable target
 )
 
@@ -39,6 +40,7 @@ CPMAddPackage(
         NAME openssl-cmake
         GIT_REPOSITORY https://hub.fastgit.org/janbar/openssl-cmake.git
         GIT_TAG master
+        GIT_SHALLOW 1 # --depth 1
         OPTIONS
         "WITH_APPS OFF"
 )
@@ -55,7 +57,9 @@ CPMAddPackage(
   NAME libhv
   GIT_REPOSITORY https://hub.fastgit.org/ithewei/libhv.git
   GIT_TAG master
-  OPTIONS "BUILD_EXAMPLES OFF" "WITH_OPENSSL ON"
+  GIT_SHALLOW 1 # --depth 1
+  OPTIONS "BUILD_EXAMPLES OFF" "WITH_OPENSSL ON"  "WITH_HTTP OFF" "WITH_HTTP_SERVER OFF" "WITH_HTTP_CLIENT OFF"   "BUILD_STATIC OFF"
+          
 )
 if(libhv_ADDED)
    target_include_directories(hv INTERFACE "${libhv_BINARY_DIR}/include")
@@ -66,6 +70,7 @@ CPMAddPackage(
   NAME ireader_sdk
   GIT_REPOSITORY https://hub.fastgit.org/ireader/sdk.git
   GIT_TAG master
+  GIT_SHALLOW 1 # --depth 1
   DOWNLOAD_ONLY True
 )
 
@@ -73,6 +78,7 @@ CPMAddPackage(
   NAME ireader_media_server
   GIT_REPOSITORY https://hub.fastgit.org/ireader/media-server.git
   GIT_TAG master
+  GIT_SHALLOW 1 # --depth 1
   DOWNLOAD_ONLY True
 )
 
@@ -96,9 +102,22 @@ if (ireader_media_server_ADDED)
   add_dependencies(ireader_media_server  ssl crypto)
 
   #install(TARGETS ireader_media_server DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/lib)
+endif()
 
+CPMAddPackage(
+  NAME workflow
+  GIT_REPOSITORY https://hub.fastgit.org/sogou/workflow.git
+  GIT_TAG master
+  GIT_SHALLOW 1 # --depth 1
+  OPTIONS "REDIS n" "MYSQL n" "UPSTREAM n"
+)
+if(workflow_ADDED)
+   target_include_directories(hv INTERFACE "${workflow_BINARY_DIR}/include")
+   include_directories("${workflow_BINARY_DIR}/include")
+   add_dependencies(workflow  ssl crypto)
 
 endif()
+
 
 # ---- Add source files ----
 
