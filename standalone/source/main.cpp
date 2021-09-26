@@ -12,12 +12,14 @@ static std::vector<SocketChannelPtr> rtmpChannelList;
 
 static int rtmp_server_send(void* param, const void* header, size_t len, const void* data,
                             size_t bytes) {
-  printf("rtmp_server_send \n");
+  // printf("rtmp_server_send %d and %d\n", len, bytes);
   SocketChannelPtr channel = rtmpChannelList[0];
   if (len > 0) {
     channel.get()->write(header, len);
   }
-  channel.get()->write(data, bytes);
+  if (bytes > 0) {
+    channel.get()->write(data, bytes);
+  }
 
   return len + bytes;
 }
@@ -77,7 +79,8 @@ int main(int argc, char* argv[]) {
   srv.onMessage = [&rtmp](const SocketChannelPtr& channel, Buffer* buf) {
     // echo
     // printf("< %d\n", (int)buf->size());
-    rtmpChannelList.push_back(channel);
+    // Buffer buffer(buf->data(), buf->size());
+    rtmpChannelList.emplace_back(channel);
     rtmp_server_input(rtmp, (uint8_t*)buf->data(), buf->size());
 
     // channel->write(buf);
@@ -85,7 +88,7 @@ int main(int argc, char* argv[]) {
   srv.onWriteComplete = [](const SocketChannelPtr& channel, Buffer* buf) {
     // printf("> %.*s\n", (int)buf->size(), (char*)buf->data());
   };
-  srv.setThreadNum(4);
+  srv.setThreadNum(1);
   srv.start();
   printf("start\n");
 

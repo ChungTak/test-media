@@ -37,7 +37,7 @@ RtmpSession::~RtmpSession() {
   printf("close socket \n");
 }
 void RtmpSession::OnReceive(const SocketChannelPtr &conn, Buffer *buffer) {
-  printf("flv_demuxer_create \n");
+  printf("RtmpSessionOnReceive \n");
 
   // const evpp::Slice bufSlice = buffer->NextAll();
   // buffer->Reset();
@@ -161,15 +161,24 @@ int RtmpSession::demuxHandler(void *param, int codec, const void *data, size_t b
 
 int rtmp_handler_send(void *param, const void *header, size_t len, const void *payload,
                       size_t bytes) {
-  // printf("rtmp_handler_send len = %d   bytes = %d\n", len, bytes);
+  printf("rtmp_handler_send len = %d   bytes = %d\n", len, bytes);
 
   // RtmpSessionPtr clientPtr
   RtmpSession *session = (RtmpSession *)param;
   // RtmpSession *session = reinterpret_cast<RtmpSession *>(param);
-  session->mConn->write(header, len);
+
+  if (len > 0) {
+    printf("send head\n");
+    session->mConn->write(header, len);
+  }
+  printf("send head end\n");
   if (bytes > 0) {
+    printf("send payload\n");
+
     session->mConn->write(payload, bytes);
   }
+  printf("send payload end\n");
+
   // printf("rtmp_handler_send result = %d\n", len + bytes);
 
   return len + bytes;

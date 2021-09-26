@@ -104,19 +104,19 @@ if (ireader_media_server_ADDED)
   #install(TARGETS ireader_media_server DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/lib)
 endif()
 
-CPMAddPackage(
-  NAME workflow
-  GIT_REPOSITORY https://hub.fastgit.org/sogou/workflow.git
-  GIT_TAG master
-  GIT_SHALLOW 1 # --depth 1
-  OPTIONS "REDIS n" "MYSQL n" "UPSTREAM n"
-)
-if(workflow_ADDED)
-   target_include_directories(hv INTERFACE "${workflow_BINARY_DIR}/include")
-   include_directories("${workflow_BINARY_DIR}/include")
-   add_dependencies(workflow  ssl crypto)
+# CPMAddPackage(
+#   NAME workflow
+#   GIT_REPOSITORY https://hub.fastgit.org/sogou/workflow.git
+#   GIT_TAG master
+#   GIT_SHALLOW 1 # --depth 1
+#   OPTIONS "REDIS n" "MYSQL n" "UPSTREAM n"
+# )
+# if(workflow_ADDED)
+#    target_include_directories(hv INTERFACE "${workflow_SOURCE_DIR}/src/include")
+#    include_directories("${workflow_SOURCE_DIR}/src/include")
+#    add_dependencies(workflow  ssl crypto)
 
-endif()
+# endif()
 
 
 # ---- Add source files ----
