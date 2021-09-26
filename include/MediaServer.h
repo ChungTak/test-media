@@ -3,10 +3,13 @@
 
 #include "flv-demuxer.h"
 #include "flv-muxer.h"
+#include "hv/TcpServer.h"
 #include "rtmp-server.h"
+
+using namespace hv;
 class NodeRtmpServer {
 public:
-  NodeRtmpServer(int socket);
+  NodeRtmpServer(SocketChannelPtr channel);
   ~NodeRtmpServer();
   static int flv_demuxer_handler(void *param, int codec, const void *data, size_t bytes,
                                  uint32_t pts, uint32_t dts, int flags);
@@ -18,7 +21,7 @@ public:
 
   int start();
   int id = 0;
-  int socket;
+  SocketChannelPtr channel;
 };
 
 #endif
